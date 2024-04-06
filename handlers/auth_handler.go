@@ -3,7 +3,9 @@ package handlers
 import (
 	"JWTAuthentication/db"
 	"JWTAuthentication/models"
+	_ "context"
 	"encoding/json"
+	_ "fmt"
 	"net/http"
 	"time"
 
@@ -90,6 +92,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	if !token.Valid {
 		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
