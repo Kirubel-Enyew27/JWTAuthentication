@@ -13,7 +13,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var jwtKey = []byte("kcccck")
+var JWTKey = []byte("kcccck")
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	var user models.User
@@ -30,14 +30,15 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	expirationTime := time.Now().Add(time.Hour)
 	claims := &models.Claims{
-		Username: user.Username,
+		UserID:   existingUser.ID,
+		Username: existingUser.Username,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(JWTKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,7 +83,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	claims := &models.Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return JWTKey, nil
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
@@ -100,7 +101,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	claims.ExpiresAt = time.Now().Add(time.Hour).Unix()
 	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err = token.SignedString(jwtKey)
+	tokenString, err = token.SignedString(JWTKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

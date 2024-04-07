@@ -4,9 +4,11 @@ import (
 	"JWTAuthentication/db"
 	"JWTAuthentication/models"
 	"encoding/json"
+	_ "fmt"
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,19 +16,54 @@ import (
 )
 
 func ListUsers(w http.ResponseWriter, r *http.Request) {
+	pageStr := r.URL.Query().Get("page")
+	perPageStr := r.URL.Query().Get("per_page")
+
+	page := 1
+	perPage := 3
+
+	if pageStr != "" {
+		pageInt, err := strconv.Atoi(pageStr)
+		if err != nil || pageInt < 1 {
+			http.Error(w, "Invalid page number", http.StatusBadRequest)
+			return
+		}
+		page = pageInt
+	}
+
+	if perPageStr != "" {
+		perPageInt, err := strconv.Atoi(perPageStr)
+		if err != nil || perPageInt < 1 {
+			http.Error(w, "Invalid per_page value", http.StatusBadRequest)
+			return
+		}
+		perPage = perPageInt
+	}
+
+	offset := (page - 1) * perPage
+
 	tokenCookie, err := r.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
 	tokenString := tokenCookie.Value
 	claims := &models.Claims{}
 
 	_, err = jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return JWTKey, nil
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
+		} else {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -35,9 +72,14 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users := make([]models.User, 0, len(db.Users))
+	users := make([]models.User, 0, perPage)
+
+	i := 0
 	for _, user := range db.Users {
-		users = append(users, user)
+		if i >= offset && len(users) < perPage {
+			users = append(users, user)
+		}
+		i++
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -50,7 +92,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 	claims := &models.Claims{}
 
 	_, err = jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return JWTKey, nil
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
@@ -99,7 +141,7 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 	claims := &models.Claims{}
 
 	_, err = jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return JWTKey, nil
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
