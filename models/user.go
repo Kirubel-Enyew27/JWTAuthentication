@@ -2,6 +2,8 @@ package models
 
 import (
 	"encoding/json"
+	"errors"
+	"regexp"
 
 	"github.com/dgrijalva/jwt-go"
 )
@@ -9,8 +11,19 @@ import (
 type PhoneNumber string
 
 func (p PhoneNumber) MarshalJSON() ([]byte, error) {
-	formatted := "2519" + string(p[3:])
-	return json.Marshal(formatted)
+	var re = []*regexp.Regexp{
+		regexp.MustCompile(`^(\+251|0)([79][0-9]{8})$`),
+		regexp.MustCompile(`^([79][0-9]{8})$`),
+	}
+
+	for _, r := range re {
+		if match := r.FindStringSubmatch(string(p)); match != nil {
+			formatted := "251" + match[2]
+			return json.Marshal(formatted)
+		}
+	}
+
+	return nil, errors.New("invalid phone number format")
 }
 
 type User struct {

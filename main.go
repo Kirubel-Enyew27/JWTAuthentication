@@ -12,13 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	UNABLE_TO_SAVE          = "UNABLE_TO_SAVE"
-	UNABLE_TO_FIND_RESOURCE = "UNABLE_TO_FIND_RESOURCE"
-	UNABLE_TO_READ          = "UNABLE_TO_READ"
-	UNAUTHORIZED            = "UNAUTHORIZED"
-)
-
 func extractUserIDFromToken(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

@@ -1,10 +1,10 @@
 package handlers
 
 import (
+	"JWTAuthentication/customErrors"
 	"JWTAuthentication/db"
 	"JWTAuthentication/models"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -50,13 +50,34 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	i := 0
 	for _, user := range db.Users {
 		if i >= offset && len(users) < params.PerPage {
-			users = append(users, user)
+			u := models.User{
+				ID:       user.ID,
+				Username: user.Username,
+				Email:    user.Email,
+				Phone:    user.Phone,
+				Address:  user.Address,
+			}
+			users = append(users, u)
 		}
 		i++
 	}
 
+	if len(users) == 0 {
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_FIND_RESOURCE, "No users found")
+		return
+	}
+
+	for i := range users {
+		if users[i].Phone == "" {
+			users[i].Phone = models.PhoneNumber("")
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	if err := json.NewEncoder(w).Encode(users); err != nil {
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "Error encoding users")
+		return
+	}
 }
 
 func Upload(w http.ResponseWriter, r *http.Request) {
@@ -68,8 +89,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 
 	file, handler, err := r.FormFile("image")
 	if err != nil {
-		fmt.Println("Error:", err)
-		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "unable to read form data")
 		return
 	}
 	defer file.Close()
@@ -87,7 +107,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 
 	if _, err := io.Copy(f, file); err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_SAVE, "unable to save file")
 		return
 	}
 
@@ -99,13 +119,13 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 	filename := strings.TrimPrefix(r.URL.Path, "/images/")
 	file, err := os.Open("uploads/" + filename)
 	if err != nil {
-		http.Error(w, "File not found", http.StatusNotFound)
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_FIND_RESOURCE, "unable to find resource")
 		return
 	}
 	defer file.Close()
 
 	if _, err := io.Copy(w, file); err != nil {
-		http.Error(w, "Error serving file", http.StatusInternalServerError)
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "unable to read file")
 		return
 	}
 }

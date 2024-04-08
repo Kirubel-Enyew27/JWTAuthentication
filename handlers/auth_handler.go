@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"JWTAuthentication/customErrors"
 	"JWTAuthentication/db"
 	"JWTAuthentication/models"
 	_ "context"
@@ -26,7 +27,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	existingUser, ok := db.Users[user.Username]
 	if !ok || bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password)) != nil {
-		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		customErrors.HandleHTTPError(w, customErrors.UNAUTHORIZED, "Invalid username or password")
 		return
 	}
 
@@ -66,7 +67,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !isValidPhoneNumber(user.Phone) {
+	if !isValidPhoneNumber(string(user.Phone)) {
 		http.Error(w, "Invalid phone number format", http.StatusBadRequest)
 		return
 	}
@@ -83,7 +84,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_SAVE, "unable to save use data")
 		return
 	}
 
