@@ -1,14 +1,25 @@
 package models
 
-import "github.com/dgrijalva/jwt-go"
+import (
+	"encoding/json"
+
+	"github.com/dgrijalva/jwt-go"
+)
+
+type PhoneNumber string
+
+func (p PhoneNumber) MarshalJSON() ([]byte, error) {
+	formatted := "2519" + string(p[3:])
+	return json.Marshal(formatted)
+}
 
 type User struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-	Phone    string `json:"phone"`
-	Address  string `json:"address"`
+	ID       string      `json:"id,omitempty"`
+	Username string      `json:"username,omitempty"`
+	Password string      `json:"password,omitempty"`
+	Email    string      `json:"email,omitempty"`
+	Phone    PhoneNumber `json:"phone,omitempty"`
+	Address  string      `json:"address,omitempty"`
 }
 
 type Claims struct {

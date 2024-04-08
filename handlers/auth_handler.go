@@ -61,19 +61,16 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate email format
 	if !isValidEmail(user.Email) {
 		http.Error(w, "Invalid email format", http.StatusBadRequest)
 		return
 	}
 
-	// Validate phone number format
 	if !isValidPhoneNumber(user.Phone) {
 		http.Error(w, "Invalid phone number format", http.StatusBadRequest)
 		return
 	}
 
-	// Validate address field
 	if !isValidAddress(user.Address) {
 		http.Error(w, "Address cannot contain numbers except if it's empty", http.StatusBadRequest)
 		return
@@ -98,24 +95,16 @@ func Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func isValidEmail(email string) bool {
-	// Basic email format validation using regex
-	// This regex may not cover all valid email formats
-	// Adjust it according to your specific requirements
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	return emailRegex.MatchString(email)
 }
 
 func isValidPhoneNumber(phone string) bool {
-	// Basic phone number format validation using regex
-	// This regex may not cover all valid phone number formats
-	// Adjust it according to your specific requirements
 	phoneRegex := regexp.MustCompile(`^(\+251|0)[79][0-9]{8}$`)
 	return phoneRegex.MatchString(phone)
 }
 
 func isValidAddress(address string) bool {
-	// Validate address field to ensure it does not contain any numbers
-	// except if it's empty
 	if address == "" {
 		return true
 	}
