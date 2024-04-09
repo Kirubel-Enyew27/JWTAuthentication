@@ -1,6 +1,8 @@
 package db
 
-import "JWTAuthentication/models"
+import (
+	"JWTAuthentication/models"
+)
 
 var Users map[string]models.User
 

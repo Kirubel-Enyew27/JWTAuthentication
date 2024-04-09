@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
 	"regexp"
 
 	"github.com/dgrijalva/jwt-go"
@@ -39,4 +40,32 @@ type Claims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	jwt.StandardClaims
+}
+
+type Response struct {
+	MetaData map[string]interface{} `json:"meta_data"`
+	Data     interface{}            `json:"data"`
+}
+
+func MetaDataHandler(w http.ResponseWriter, response Response) {
+
+	if len(response.MetaData) == 0 {
+		response = Response{
+			MetaData: map[string]interface{}{
+				"status":  "success",
+				"message": "Request processed successfully",
+			},
+			Data: response.Data,
+		}
+	}
+
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonResponse)
 }

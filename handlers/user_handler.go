@@ -4,7 +4,6 @@ import (
 	"JWTAuthentication/customErrors"
 	"JWTAuthentication/db"
 	"JWTAuthentication/models"
-	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -36,7 +35,7 @@ func parsePaginationParams(r *http.Request) PaginationParams {
 	if perPageInt, err := strconv.Atoi(perPageStr); err == nil && perPageInt > 0 {
 		params.PerPage = perPageInt
 	} else {
-		params.PerPage = 3
+		params.PerPage = 5
 	}
 
 	return params
@@ -73,11 +72,15 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(users); err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "Error encoding users")
-		return
+	response := models.Response{
+		MetaData: make(map[string]interface{}),
+		Data:     users,
 	}
+
+	response.MetaData["Page"] = params.Page
+	response.MetaData["PerPage"] = params.PerPage
+
+	models.MetaDataHandler(w, response)
 }
 
 func Upload(w http.ResponseWriter, r *http.Request) {
@@ -111,6 +114,13 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := models.Response{
+		MetaData: make(map[string]interface{}),
+		Data:     "uploads/" + handler.Filename,
+	}
+
+	models.MetaDataHandler(w, response)
+	w.Write([]byte("\n"))
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("File uploaded successfully"))
 }

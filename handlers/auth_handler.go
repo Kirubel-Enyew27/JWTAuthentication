@@ -91,6 +91,13 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	user.Password = string(hashedPassword)
 	db.Users[user.Username] = user
 
+	response := models.Response{
+		MetaData: make(map[string]interface{}),
+		Data:     user,
+	}
+
+	models.MetaDataHandler(w, response)
+	w.Write([]byte("\n"))
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User registered successfully"))
 }
