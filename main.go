@@ -2,120 +2,36 @@ package main
 
 import (
 	"JWTAuthentication/handlers"
-	"context"
-	"errors"
+	"JWTAuthentication/middlewares"
 	"fmt"
 	"net/http"
-	"time"
+	"os"
 
-	"github.com/dgrijalva/jwt-go"
-	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 )
-
-func extractUserIDFromToken(tokenString string) (string, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
-		}
-		return []byte(handlers.JWTKey), nil
-	})
-	if err != nil {
-		return "", fmt.Errorf("token parsing error: %v", err)
-	}
-
-	if !token.Valid {
-		return "", errors.New("token is invalid")
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return "", errors.New("unable to extract claims: claims are not of type jwt.MapClaims")
-	}
-
-	userID, ok := claims["user_id"].(string)
-	if !ok {
-		return "", errors.New("unable to extract user ID: UserID claim not found or not a string")
-	}
-	return userID, nil
-}
-
-func authenticateMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tokenCookie, err := r.Cookie("token")
-		if err != nil {
-			if err == http.ErrNoCookie {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		token := tokenCookie.Value
-
-		userId, err := extractUserIDFromToken(token)
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), "UserID", userId)
-
-		next.ServeHTTP(w, r.WithContext(ctx))
-	}
-}
-
-func TimeOutMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		requestId := uuid.New().String()
-
-		ctx := context.WithValue(r.Context(), "RequestID", requestId)
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-
-		done := make(chan struct{})
-		defer close(done)
-
-		var errType string
-
-		go func() {
-			defer func() {
-				if err := recover(); err != nil {
-					switch err.(type) {
-					case string:
-						errType = err.(string)
-					default:
-						errType = "Unknown Error"
-					}
-					ctx = context.WithValue(ctx, "ErrorType", errType)
-				}
-			}()
-
-			next.ServeHTTP(w, r.WithContext(ctx))
-			done <- struct{}{}
-		}()
-
-		select {
-		case <-done:
-			return
-		case <-ctx.Done():
-			if errType != "" {
-				http.Error(w, errType, http.StatusInternalServerError)
-			} else {
-				http.Error(w, "Request timed out", http.StatusGatewayTimeout)
-			}
-			return
-		}
-	}
-}
 
 func main() {
 
-	http.HandleFunc("/register", TimeOutMiddleware(handlers.Register))
-	http.HandleFunc("/login", TimeOutMiddleware(handlers.Login))
-	http.HandleFunc("/refresh", TimeOutMiddleware(handlers.RefreshToken))
-	http.HandleFunc("/users", authenticateMiddleware(TimeOutMiddleware(handlers.ListUsers)))
-	http.HandleFunc("/upload", authenticateMiddleware(TimeOutMiddleware(handlers.Upload)))
-	http.HandleFunc("/images/", authenticateMiddleware(TimeOutMiddleware(handlers.GetImage)))
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file:", err)
+		return
+	}
+
+	jwtKey := os.Getenv("JWT_KEY")
+	if jwtKey == "" {
+		fmt.Println("JWT_KEY not found in environment variables")
+		return
+	}
+
+	handlers.JWTKey = []byte(jwtKey)
+
+	http.HandleFunc("/register", middlewares.TimeOutMiddleware(handlers.Register))
+	http.HandleFunc("/login", middlewares.TimeOutMiddleware(handlers.Login))
+	http.HandleFunc("/refresh", middlewares.TimeOutMiddleware(handlers.RefreshToken))
+	http.HandleFunc("/users", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(handlers.ListUsers)))
+	http.HandleFunc("/upload", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(handlers.Upload)))
+	http.HandleFunc("/images/", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(handlers.GetImage)))
 
 	fmt.Println("Server is running on port 8080")
 	http.ListenAndServe(":8080", nil)

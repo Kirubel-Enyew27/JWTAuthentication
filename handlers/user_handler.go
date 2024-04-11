@@ -86,7 +86,7 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 func Upload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, defaultMaxFileSize)
 	if err := r.ParseMultipartForm(defaultMaxFileSize); err != nil {
-		http.Error(w, "Error parsing form data", http.StatusInternalServerError)
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "Error parsing form data")
 		return
 	}
 
@@ -135,7 +135,7 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	if _, err := io.Copy(w, file); err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "unable to read file")
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "unable to open file")
 		return
 	}
 }

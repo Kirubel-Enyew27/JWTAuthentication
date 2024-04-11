@@ -16,12 +16,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var JWTKey = []byte("kcccck")
+var JWTKey []byte
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "Error parsing request body")
 		return
 	}
 
@@ -58,7 +58,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 func Register(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "Error parsing request body")
 		return
 	}
 
@@ -73,7 +73,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isValidAddress(user.Address) {
-		http.Error(w, "Address cannot contain numbers except if it's empty", http.StatusBadRequest)
+		http.Error(w, "Address cannot contain numbers", http.StatusBadRequest)
 		return
 	}
 
@@ -84,7 +84,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_SAVE, "unable to save use data")
+		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_SAVE, "unable to save user data")
 		return
 	}
 
@@ -127,6 +127,9 @@ func isValidAddress(address string) bool {
 
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	tokenCookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 	tokenString := tokenCookie.Value
 	claims := &models.Claims{}
 
