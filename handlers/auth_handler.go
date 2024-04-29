@@ -103,7 +103,7 @@ func isValidEmail(email string) bool {
 }
 
 func isValidPhoneNumber(phone string) bool {
-	phoneRegex := regexp.MustCompile(`^(\+251|0)[79][0-9]{8}$`)
+	phoneRegex := regexp.MustCompile(`^(\+251|251|0)?([79][0-9]{8})$`)
 	return phoneRegex.MatchString(phone)
 }
 

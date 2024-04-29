@@ -13,7 +13,7 @@ type PhoneNumber string
 
 func (p PhoneNumber) MarshalJSON() ([]byte, error) {
 	var re = []*regexp.Regexp{
-		regexp.MustCompile(`^(\+251|0)([79][0-9]{8})$`),
+		regexp.MustCompile(`^(\+251|251|0)?([79][0-9]{8})$`),
 		regexp.MustCompile(`^([79][0-9]{8})$`),
 	}
 
