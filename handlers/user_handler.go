@@ -62,8 +62,7 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(users) == 0 {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_FIND_RESOURCE, "No users found")
-		return
+		panic(customErrors.UNABLE_TO_FIND_RESOURCE + "(No users found)")
 	}
 
 	for i := range users {
@@ -86,32 +85,27 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 func Upload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, defaultMaxFileSize)
 	if err := r.ParseMultipartForm(defaultMaxFileSize); err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "Error parsing form data")
-		return
+		panic(customErrors.UNABLE_TO_READ + "(Error parsing form data)")
 	}
 
 	file, handler, err := r.FormFile("image")
 	if err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "unable to read form data")
-		return
+		panic(customErrors.UNABLE_TO_READ + "(unable to read form data)")
 	}
 	defer file.Close()
 
 	if err := os.MkdirAll("uploads", 0755); err != nil {
-		http.Error(w, "Error creating directory", http.StatusInternalServerError)
-		return
+		panic(customErrors.UNABLE_TO_SAVE + "(Error creating directory)")
 	}
 
 	f, err := os.OpenFile("uploads/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		http.Error(w, "Error saving file", http.StatusInternalServerError)
-		return
+		panic(customErrors.UNABLE_TO_SAVE + "(Error saving file)")
 	}
 	defer f.Close()
 
 	if _, err := io.Copy(f, file); err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_SAVE, "unable to save file")
-		return
+		panic(customErrors.UNABLE_TO_SAVE + "(unable to save file)")
 	}
 
 	response := models.Response{
@@ -129,13 +123,11 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 	filename := strings.TrimPrefix(r.URL.Path, "/images/")
 	file, err := os.Open("uploads/" + filename)
 	if err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_FIND_RESOURCE, "unable to find resource")
-		return
+		panic(customErrors.UNABLE_TO_FIND_RESOURCE + "(unable to find resource)")
 	}
 	defer file.Close()
 
 	if _, err := io.Copy(w, file); err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "unable to open file")
-		return
+		panic(customErrors.UNABLE_TO_READ + "(unable to open file)")
 	}
 }

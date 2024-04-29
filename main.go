@@ -26,12 +26,12 @@ func main() {
 
 	handlers.JWTKey = []byte(jwtKey)
 
-	http.HandleFunc("/register", middlewares.TimeOutMiddleware(handlers.Register))
-	http.HandleFunc("/login", middlewares.TimeOutMiddleware(handlers.Login))
-	http.HandleFunc("/refresh", middlewares.TimeOutMiddleware(handlers.RefreshToken))
-	http.HandleFunc("/users", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(handlers.ListUsers)))
-	http.HandleFunc("/upload", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(handlers.Upload)))
-	http.HandleFunc("/images/", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(handlers.GetImage)))
+	http.HandleFunc("/register", middlewares.TimeOutMiddleware(middlewares.ErrorMiddleware(handlers.Register)))
+	http.HandleFunc("/login", middlewares.TimeOutMiddleware(middlewares.ErrorMiddleware(handlers.Login)))
+	http.HandleFunc("/refresh", middlewares.TimeOutMiddleware(middlewares.ErrorMiddleware(handlers.RefreshToken)))
+	http.HandleFunc("/users", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(middlewares.ErrorMiddleware(handlers.ListUsers))))
+	http.HandleFunc("/upload", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(middlewares.ErrorMiddleware(handlers.Upload))))
+	http.HandleFunc("/images/", middlewares.AuthMiddleware(middlewares.TimeOutMiddleware(middlewares.ErrorMiddleware(handlers.GetImage))))
 
 	fmt.Println("Server is running on port 8080")
 	http.ListenAndServe(":8080", nil)

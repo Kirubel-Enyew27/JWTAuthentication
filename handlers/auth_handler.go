@@ -21,14 +21,12 @@ var JWTKey []byte
 func Login(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "Error parsing request body")
-		return
+		panic(customErrors.UNABLE_TO_READ + "(error parsing request body)")
 	}
 
 	existingUser, ok := db.Users[user.Username]
 	if !ok || bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password)) != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNAUTHORIZED, "Invalid username or password")
-		return
+		panic(customErrors.UNAUTHORIZED + "(invalid username or password)")
 	}
 
 	expirationTime := time.Now().Add(time.Hour)
@@ -43,8 +41,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(JWTKey)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(customErrors.UNABLE_TO_READ + "(" + err.Error() + ")")
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -58,8 +55,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 func Register(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_READ, "Error parsing request body")
-		return
+		panic(customErrors.UNABLE_TO_SAVE + "(error parsing request body)")
 	}
 
 	if !isValidEmail(user.Email) {
@@ -84,8 +80,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		customErrors.HandleHTTPError(w, customErrors.UNABLE_TO_SAVE, "unable to save user data")
-		return
+		panic(customErrors.UNABLE_TO_SAVE + "(unable to save user data)")
 	}
 
 	user.Password = string(hashedPassword)
@@ -128,7 +123,7 @@ func isValidAddress(address string) bool {
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	tokenCookie, err := r.Cookie("token")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		panic(customErrors.UNABLE_TO_READ + "(" + err.Error() + ")")
 	}
 	tokenString := tokenCookie.Value
 	claims := &models.Claims{}
@@ -138,15 +133,9 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
+			panic(customErrors.UNAUTHORIZED + "(invalid token)")
 		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if !token.Valid {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return
 	}
 
@@ -154,8 +143,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err = token.SignedString(JWTKey)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(customErrors.UNABLE_TO_READ + "(" + err.Error() + ")")
 	}
 
 	http.SetCookie(w, &http.Cookie{
