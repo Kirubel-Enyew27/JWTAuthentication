@@ -5,6 +5,7 @@ import (
 	"JWTAuthentication/db"
 	"JWTAuthentication/models"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -93,6 +94,16 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 		panic(customErrors.UNABLE_TO_READ + "(unable to read form data)")
 	}
 	defer file.Close()
+
+	fileBytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		panic(customErrors.UNABLE_TO_READ + "(error reading file)")
+	}
+
+	contentType := http.DetectContentType(fileBytes)
+	if !strings.HasPrefix(contentType, "image/") {
+		panic(customErrors.UNABLE_TO_READ + "(only image files are allowed)")
+	}
 
 	if err := os.MkdirAll("uploads", 0755); err != nil {
 		panic(customErrors.UNABLE_TO_SAVE + "(Error creating directory)")
