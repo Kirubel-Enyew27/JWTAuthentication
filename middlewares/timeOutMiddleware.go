@@ -13,7 +13,7 @@ func TimeOutMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		requestId := uuid.New().String()
 
 		ctx := context.WithValue(r.Context(), "RequestID", requestId)
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
 		defer cancel()
 
 		done := make(chan struct{})

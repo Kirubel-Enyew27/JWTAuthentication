@@ -1,6 +1,7 @@
 package customErrors
 
 import (
+	"context"
 	"net/http"
 )
 
@@ -18,17 +19,4 @@ var ErrorStatusMap = map[string]int{
 	UNAUTHORIZED:            http.StatusUnauthorized,
 }
 
-// func HandleHTTPError(w http.ResponseWriter, errCode string, errorMessage string) {
-// 	statusCode, ok := errorStatusMap[errCode]
-// 	if !ok {
-// 		statusCode = http.StatusInternalServerError
-// 	}
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(statusCode)
-
-// 	errorResponse := map[string]string{
-// 		"error": errorMessage,
-// 	}
-// 	json.NewEncoder(w).Encode(errorResponse)
-// }
+var CtxValue context.Context

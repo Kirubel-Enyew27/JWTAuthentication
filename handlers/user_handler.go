@@ -4,6 +4,7 @@ import (
 	"JWTAuthentication/customErrors"
 	"JWTAuthentication/db"
 	"JWTAuthentication/models"
+	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -53,6 +54,7 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 			u := models.User{
 				ID:       user.ID,
 				Username: user.Username,
+				Password: user.Password,
 				Email:    user.Email,
 				Phone:    user.Phone,
 				Address:  user.Address,
@@ -63,7 +65,9 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(users) == 0 {
-		panic(customErrors.UNABLE_TO_FIND_RESOURCE + "(No users found)")
+		error := customErrors.UNABLE_TO_FIND_RESOURCE + "(no users found)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 
 	for i := range users {
@@ -86,37 +90,51 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 func Upload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, defaultMaxFileSize)
 	if err := r.ParseMultipartForm(defaultMaxFileSize); err != nil {
-		panic(customErrors.UNABLE_TO_READ + "(Error parsing form data)")
+		error := customErrors.UNABLE_TO_READ + "(error parsing form data)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 
 	file, handler, err := r.FormFile("image")
 	if err != nil {
-		panic(customErrors.UNABLE_TO_READ + "(unable to read form data)")
+		error := customErrors.UNABLE_TO_READ + "(unable to read form data)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 	defer file.Close()
 
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		panic(customErrors.UNABLE_TO_READ + "(error reading file)")
+		error := customErrors.UNABLE_TO_READ + "(error reading file)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 
 	contentType := http.DetectContentType(fileBytes)
 	if !strings.HasPrefix(contentType, "image/") {
-		panic(customErrors.UNABLE_TO_READ + "(only image files are allowed)")
+		error := customErrors.UNABLE_TO_READ + "(only image files are allowed)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 
 	if err := os.MkdirAll("uploads", 0755); err != nil {
-		panic(customErrors.UNABLE_TO_SAVE + "(Error creating directory)")
+		error := customErrors.UNABLE_TO_SAVE + "(Error creating directory)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 
 	f, err := os.OpenFile("uploads/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		panic(customErrors.UNABLE_TO_SAVE + "(Error saving file)")
+		error := customErrors.UNABLE_TO_SAVE + "(Error saving file)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 	defer f.Close()
 
 	if _, err := io.Copy(f, file); err != nil {
-		panic(customErrors.UNABLE_TO_SAVE + "(unable to save file)")
+		error := customErrors.UNABLE_TO_SAVE + "(unable to save file)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 
 	response := models.Response{
@@ -134,11 +152,15 @@ func GetImage(w http.ResponseWriter, r *http.Request) {
 	filename := strings.TrimPrefix(r.URL.Path, "/images/")
 	file, err := os.Open("uploads/" + filename)
 	if err != nil {
-		panic(customErrors.UNABLE_TO_FIND_RESOURCE + "(unable to find resource)")
+		error := customErrors.UNABLE_TO_FIND_RESOURCE + "(unable to find resource)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 	defer file.Close()
 
 	if _, err := io.Copy(w, file); err != nil {
-		panic(customErrors.UNABLE_TO_READ + "(unable to open file)")
+		error := customErrors.UNABLE_TO_READ + "(unable to open file)"
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", error)
+		return
 	}
 }

@@ -10,10 +10,11 @@ import (
 
 func ErrorMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return (func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		customErrors.CtxValue = context.WithValue(context.Background(), "errType", nil)
+
 		defer func() {
-			if r := recover(); r != nil {
-				errMessage, _ := r.(string)
+			if err := customErrors.CtxValue.Value("errType"); err != nil {
+				errMessage, _ := err.(string)
 				errCode := strings.Split(errMessage, "(")[0]
 
 				statusCode, ok := customErrors.ErrorStatusMap[errCode]
@@ -21,8 +22,6 @@ func ErrorMiddleware(next http.HandlerFunc) http.HandlerFunc {
 					statusCode = http.StatusInternalServerError
 				}
 
-				ctx = context.WithValue(ctx, "error", errMessage)
-				ctx = context.WithValue(ctx, "http_status", statusCode)
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(statusCode)
 
@@ -32,6 +31,6 @@ func ErrorMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				json.NewEncoder(w).Encode(errorResponse)
 			}
 		}()
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	})
 }
